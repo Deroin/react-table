@@ -24,16 +24,16 @@ export default Base =>
     }
 
     componentDidUpdate (prevProps, prevState) {
-      const oldState = this.getResolvedState(prevProps, prevState)
-      const newState = this.getResolvedState(this.props, this.state)
+      const previousState = this.getResolvedState(prevProps, prevState)
+      const currentState = this.getResolvedState(this.props, this.state)
 
       // Do a deep compare of new and old `defaultOption` and
       // if they are different reset `option = defaultOption`
       const defaultableOptions = ['sorted', 'filtered', 'resized', 'expanded']
       defaultableOptions.forEach(x => {
         const defaultName = `default${x.charAt(0).toUpperCase() + x.slice(1)}`
-        if (JSON.stringify(oldState[defaultName]) !== JSON.stringify(newState[defaultName])) {
-          newState[x] = newState[defaultName]
+        if (JSON.stringify(previousState[defaultName]) !== JSON.stringify(currentState[defaultName])) {
+          currentState[x] = currentState[defaultName]
         }
       })
 
@@ -43,23 +43,27 @@ export default Base =>
       // e.g. If `filterable` has changed, set `filtered = defaultFiltered`
       const resettableOptions = ['sortable', 'filterable', 'resizable']
       resettableOptions.forEach(x => {
-        if (oldState[x] !== newState[x]) {
+        if (previousState[x] !== currentState[x]) {
           const baseName = x.replace('able', '')
           const optionName = `${baseName}ed`
           const defaultName = `default${optionName.charAt(0).toUpperCase() + optionName.slice(1)}`
-          newState[optionName] = newState[defaultName]
+          currentState[optionName] = currentState[defaultName]
         }
       })
 
       // Props that trigger a data update
       if (
-        oldState.data !== newState.data ||
-        oldState.columns !== newState.columns ||
-        oldState.pivotBy !== newState.pivotBy ||
-        oldState.sorted !== newState.sorted ||
-        oldState.filtered !== newState.filtered
+        previousState.data !== currentState.data ||
+        previousState.columns !== currentState.columns ||
+        previousState.pivotBy !== currentState.pivotBy ||
+        previousState.sorted !== currentState.sorted ||
+        previousState.filtered !== currentState.filtered
       ) {
-        this.setStateWithData(this.getDataModel(newState, oldState.data !== newState.data))
+        this.setStateWithData(
+          this.getDataModel(currentState, previousState.data !== currentState.data),
+          null,
+          previousState
+        )
       }
     }
 
@@ -129,8 +133,10 @@ export default Base =>
       return newResolvedState
     }
 
-    setStateWithData (dataModel, cb) {
-      const oldState = this.getResolvedState()
+    setStateWithData (dataModel, cb, oldState = null) {
+      if (oldState === null) {
+        oldState = this.getResolvedState()
+      }
       const newResolvedState = this.calculateNewResolvedState(dataModel)
 
       return this.setState(newResolvedState, () => {
